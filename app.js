@@ -1,8 +1,13 @@
 const express = require('express');
 const zendeskSdk = require('node-zendesk');
+const bodyParser = require('body-parser');
 
 const Zendesk = require('./models/zendesk.js');
 
+const app = express()
+app.set('port', process.env.PORT || 5000);
+app.use(bodyParser.json({limit: '10mb', extended: true}))
+app.use(bodyParser.urlencoded({limit: '10mb', extended: true}))
 
 let client = zendeskSdk.createClient({
   username:  'shaun.t.vanweelden@gmail.com',
@@ -10,8 +15,6 @@ let client = zendeskSdk.createClient({
   remoteUri: 'https://shaundev.zendesk.com/api/v2'
 });
 
-const app = express()
-app.set('port', process.env.PORT || 3000);
 
 let requesterEmail = "customer6@example.com";
 let requesterName = "Test6";
@@ -38,6 +41,11 @@ let body = "Care to celebrate?";
   }
 })();
 
-app.get('/', (req, res) => res.send('Hello World!'))
+app.get('/', (req, res) => res.send('Hello World!'));
+
+app.get('/zendesk', (req, res) => {
+  console.log(req.body);
+  res.status(200)
+});
 
 app.listen(app.get('port'), () => console.log(`Example app listening on port ${app.get('port')}!`))
