@@ -54,13 +54,14 @@ let ticketId = 14;
 app.get('/', (req, res) => res.send('Hello, World!'));
 
 app.post('/zendesk', (req, res) => {
+  // Hit when new comment is added to Zendesk Ticket
   console.log(req.body);
   res.status(200).send();
 });
 
 app.post('/slack', (req, res) => {
   console.log(req.body);
-  res.status(200).send();
+  res.status(200).send(req.body.challenge);
 });
 
 app.listen(app.get('port'), () => console.log(`Example app listening on port ${app.get('port')}!`))
