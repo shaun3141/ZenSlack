@@ -15,13 +15,14 @@ exports.findCustomerByEmail = function(email) {
     client.users.search({query: `email:${email}`}, function (err, req, result) {
       if (err) {
         reject(err);
-      }
-      if (result.length > 0) {
-        // User Exists
-        resolve(result[0]);
       } else {
-        // No user
-        resolve(null);
+        if (result.length > 0) {
+          // User Exists
+          resolve(result[0]);
+        } else {
+          // No user
+          resolve(null);
+        }
       }
     });
   });
