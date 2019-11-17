@@ -43,8 +43,8 @@ let ticketId = 14;
     // let comments = await Zendesk.getPublicCommentsByTicketId(ticketId);
     // console.log("Comments:\n" + JSON.stringify(comments, null, 2, true));
 
-    let result = await Zendesk.addCommentByTicketId(requesterUserId, 14, comment);
-    console.log("Result:\n" + JSON.stringify(result, null, 2, true));
+    // let result = await Zendesk.addCommentByTicketId(requesterUserId, 14, comment);
+    // console.log("Result:\n" + JSON.stringify(result, null, 2, true));
 
   } catch (e) {
     console.log(e);
@@ -60,8 +60,13 @@ app.post('/zendesk', (req, res) => {
 });
 
 app.post('/slack', (req, res) => {
-  console.log(req.body);
-  res.status(200).send(req.body.challenge);
+  const body = req.body;
+  console.log(body);
+  if (body.type == 'url_verification') {
+    res.status(200).send(req.body.challenge);
+  } else {
+    res.status(200).send('');
+  }
 });
 
 app.listen(app.get('port'), () => console.log(`Example app listening on port ${app.get('port')}!`))
