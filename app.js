@@ -52,11 +52,11 @@ let slackChannelId = 'DQMFNKUVA';
     // let result = await Zendesk.addCommentByTicketId(user.id, ticket.id, comment);
     // console.log("Result:\n" + JSON.stringify(result, null, 2, true));
 
-    // const result = await slackClient.chat.postMessage({
-    //   text: 'Hello world!',
-    //   channel: slackChannelId,
-    // });
-    // console.log(`Successfully send message ${result.ts} in conversation ${slackChannelId}`);
+    // Slack.addBotMessageToChannel(slackChannelId , 'Hello world!');
+
+    let ticketComments = await Zendesk.getPublicCommentsByTicketId(19);
+    let lastComment = ticketComments[ticketComments.length - 1];
+    console.log(JSON.stringify(lastComment));
 
     const slackUser = await slackClient.users.info({ user: 'UQAF29JLB' });
     console.log(slackUser.user.profile.real_name + " | " + slackUser.user.profile.email);
@@ -76,13 +76,12 @@ app.post('/zendesk', async (req, res) => {
   let lastComment = ticketComments[ticketComments.length - 1];
 
   console.log(`Channel Id: ${req.body.externalId}`);
-  console.log(`Message to Post: ${lastComment}`);
+  console.log(`Message to Post: ${lastComment.body}`); // could swap out for a parsed html_body at some point
 
   // Post that latest comment to Slack
   try {
-    await Slack.addBotMessageToChannel(slackChannelId, 'Working now?');
+    await Slack.addBotMessageToChannel(req.body.externalId, lastComment.body);
   } catch (e) {
-    console.error(JSON.stringify(e));
     res.status(500).send(JSON.stringify(e));
   }
 });
