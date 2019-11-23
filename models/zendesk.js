@@ -49,7 +49,7 @@ exports.createCustomerByNameEmail = function(name, email) {
   });
 }
 
-exports.createTicketByCustomerId = function(userId, subject, message) {
+exports.createTicketByCustomerId = function(userId, subject, message, externalId) {
   return new Promise(function(resolve, reject) {
     // Create a new Ticket
     let newTicket = {
@@ -60,11 +60,35 @@ exports.createTicketByCustomerId = function(userId, subject, message) {
         },
         'priority': 'High',
         'requester_id': userId,
-        'type': 'Problem'
+        'type': 'Problem',
+        'external_id': externalId
       }
     };
     
     client.tickets.create(newTicket, function (err, req, result) {
+      if (err) {
+        reject(err);
+      } else {
+        resolve(result);
+      }
+    });
+  });
+}
+
+exports.addCommentByTicketId = function(userId, ticketId, comment) {
+  // Create Ticket Update
+  let ticketUpdate = {
+    'ticket': {
+      'status': 'open',
+      'comment': {
+        'body': comment,
+        'author_id': userId,
+      },
+    }
+  };
+
+  return new Promise(function(resolve, reject) {
+    client.tickets.update(ticketId, ticketUpdate, function (err, req, result) {
       if (err) {
         reject(err);
       } else {
@@ -92,26 +116,18 @@ exports.getPublicCommentsByTicketId = function(ticketId) {
   });
 }
 
-exports.addCommentByTicketId = function(userId, ticketId, comment) {
-  // Create Ticket Update
-  let ticketUpdate = {
-    'ticket': {
-      'id': ticketId,
-      'status': 'open',
-      'comment': {
-        'body': comment
-      },
-      'requester_id': userId,
-    }
-  };
-
+exports.getTicketsByExternalId = function(externalId) {
   return new Promise(function(resolve, reject) {
-    client.tickets.update(ticketId, ticketUpdate, function (err, req, result) {
+    // .search.requestAll('GET', 'search.json?query=type:ticket external_id:${externalId}&sort_by=updated_at&sort_order=desc')
+    // Ugh - client.search.requestAll('GET', 'search.json?query=type:ticket external_id:${externalId}&sort_by=updated_at&sort_order=desc', function(err, req, result) {
+    // https://github.com/blakmatrix/node-zendesk/issues/235
+    client.search.queryAll(`type:ticket external_id:${externalId} order_by:created sort:desc`, function(err, req, result) {
       if (err) {
         reject(err);
       } else {
         resolve(result);
       }
+      console.log("Query:\n" + JSON.stringify(result, null, 2, true));
     });
-  });
+  }); 
 }

@@ -1,8 +1,10 @@
 const express = require('express');
 const zendeskSdk = require('node-zendesk');
 const bodyParser = require('body-parser');
+const { WebClient } = require('@slack/web-api');
 
 const Zendesk = require('./models/zendesk.js');
+const Slack = require('./models/slack.js');
 
 const app = express()
 app.set('port', process.env.PORT || 5000);
@@ -14,17 +16,20 @@ let zClient = zendeskSdk.createClient({
   token:     process.env.ZENDESK_TOKEN,
   remoteUri: 'https://shaundev.zendesk.com/api/v2'
 });
+const slackClient = new WebClient(process.env.SLACK_TOKEN);
 
 
-let requesterEmail = "customer6@example.com";
-let requesterName = "Test6";
-let requesterUserId = '397057006634'
+let requesterEmail = "customer7@timeshot.com";
+let requesterName = "Test 7";
 
 let subject = "Hey now, it's working"; // TODO: Try with ' in the subject
 let body = "Care to celebrate?";
 let comment = "Commenting is fun";
 
 let ticketId = 14;
+
+let slackUserId = 'UQAF29JLB';
+let slackChannelId = 'DQMFNKUVA';
 
 // Good helper function :) 
 // console.log(JSON.stringify(result, null, 2, true));
@@ -35,16 +40,26 @@ let ticketId = 14;
     if (!user) {
       user = await Zendesk.createCustomerByNameEmail(requesterName, requesterEmail);
     }
+    console.log("User Id: " + user.id);
     // console.log("User:\n" + JSON.stringify(user, null, 2, true));
 
-    // ticket = await Zendesk.createTicketByCustomerId(user.id, subject, body);
+    // ticket = await Zendesk.createTicketByCustomerId(user.id, subject, body, slackChannelId);
     // console.log("Ticket:\n" + JSON.stringify(ticket, null, 2, true));
 
     // let comments = await Zendesk.getPublicCommentsByTicketId(ticketId);
     // console.log("Comments:\n" + JSON.stringify(comments, null, 2, true));
 
-    // let result = await Zendesk.addCommentByTicketId(requesterUserId, 14, comment);
+    // let result = await Zendesk.addCommentByTicketId(user.id, ticket.id, comment);
     // console.log("Result:\n" + JSON.stringify(result, null, 2, true));
+
+    // const result = await slackClient.chat.postMessage({
+    //   text: 'Hello world!',
+    //   channel: slackChannelId,
+    // });
+    // console.log(`Successfully send message ${result.ts} in conversation ${slackChannelId}`);
+
+    const slackUser = await slackClient.users.info({ user: 'UQAF29JLB' });
+    console.log(slackUser.user.profile.real_name + " | " + slackUser.user.profile.email);
 
   } catch (e) {
     console.log(e);
@@ -53,18 +68,43 @@ let ticketId = 14;
 
 app.get('/', (req, res) => res.send('Hello, World!'));
 
-app.post('/zendesk', (req, res) => {
-  // Hit when new comment is added to Zendesk Ticket
-  console.log(req.body);
-  res.status(200).send();
+app.post('/zendesk', async (req, res) => {
+  // Hit when new public comment is added to Zendesk Ticket
+
+  // Get latest comment on that ticket
+  let ticketComments = await Zendesk.getPublicCommentsByTicketId(req.body.ticketId);
+  let lastComment = ticketComments[ticketComments.length - 1];
+
+  // Post that latest comment to Slack
+  try {
+    await Slack.addBotMessageToChannel(req.body.externalId, lastComment);
+  } catch (e) {
+    res.status(500).send(e);
+  }
 });
 
-app.post('/slack', (req, res) => {
+app.post('/slack', async (req, res) => {
   const body = req.body;
-  console.log(body);
+
   if (body.type == 'url_verification') {
     res.status(200).send(req.body.challenge);
+
+  } else if (body.type == 'message') {
+    console.log(body);
+    let message = body.text;
+    let channel = body.channel;
+    if (body.user) {
+      // It's a message from a human
+      let userId = body.user;
+      const slackUser = await slackClient.users.info({ user: userId });
+      console.log(slackUser.user.profile.real_name + " | " + slackUser.user.profile.email);
+    } else {
+      // It's a message from a bot
+    }
+
+    res.status(200).send('');
   } else {
+    console.log(body);
     res.status(200).send('');
   }
 });
