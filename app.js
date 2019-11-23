@@ -75,15 +75,15 @@ app.post('/zendesk', async (req, res) => {
   let ticketComments = await Zendesk.getPublicCommentsByTicketId(req.body.ticketId);
   let lastComment = ticketComments[ticketComments.length - 1];
 
-  console.log(`Channel Id: ${req.body.external_id}`);
+  console.log(`Channel Id: ${req.body.externalId}`);
   console.log(`Message to Post: ${lastComment}`);
 
   // Post that latest comment to Slack
   try {
     await Slack.addBotMessageToChannel(slackChannelId, 'Working now?');
   } catch (e) {
-    console.log()
-    res.status(500).send(e);
+    console.error(JSON.stringify(e));
+    res.status(500).send(JSON.stringify(e));
   }
 });
 
