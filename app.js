@@ -88,18 +88,20 @@ app.post('/zendesk', async (req, res) => {
 
 app.post('/slack', async (req, res) => {
   const body = req.body;
+  console.log(`Slack CB Type: ${body.type} | ${body.event ? body.event.type : '(No Event Sub-type)'}`);
 
   if (body.type == 'url_verification') {
     res.status(200).send(req.body.challenge);
 
-  } else if (body.type == 'message') {
-    console.log(body);
-    let slacKMessage = body.text;
-    let slackChannel = body.channel;
-    if (body.user) {
-      console.log("We got here...");
+  } else if (body.event && body.event.type == 'message') {
+    const event = body.event;
+    console.log(event);
+    
+    let slacKMessage = event.text;
+    let slackChannel = event.channel;
+    if (event.user) {
       // It's a message from a human
-      let slackUserId = body.user;
+      let slackUserId = event.user;
       const slackUser = await slackClient.users.info({ user: slackUserId });
       console.log("Message from: " + slackUser.user.profile.real_name + " | " + slackUser.user.profile.email);
 
