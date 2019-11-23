@@ -54,9 +54,9 @@ let slackChannelId = 'DQMFNKUVA';
 
     // Slack.addBotMessageToChannel(slackChannelId , 'Hello world!');
 
-    let ticketComments = await Zendesk.getPublicCommentsByTicketId(19);
-    let lastComment = ticketComments[ticketComments.length - 1];
-    console.log(JSON.stringify(lastComment));
+    // let ticketComments = await Zendesk.getPublicCommentsByTicketId(19);
+    // let lastComment = ticketComments[ticketComments.length - 1];
+    // console.log(JSON.stringify(lastComment));
 
     const slackUser = await slackClient.users.info({ user: 'UQAF29JLB' });
     console.log(slackUser.user.profile.real_name + " | " + slackUser.user.profile.email);
@@ -94,13 +94,63 @@ app.post('/slack', async (req, res) => {
 
   } else if (body.type == 'message') {
     console.log(body);
-    let message = body.text;
-    let channel = body.channel;
+    let slacKMessage = body.text;
+    let slackChannel = body.channel;
     if (body.user) {
       // It's a message from a human
-      let userId = body.user;
-      const slackUser = await slackClient.users.info({ user: userId });
-      console.log(slackUser.user.profile.real_name + " | " + slackUser.user.profile.email);
+      let slackUserId = body.user;
+      const slackUser = await slackClient.users.info({ user: slackUserId });
+      console.log("Message from: " + slackUser.user.profile.real_name + " | " + slackUser.user.profile.email);
+
+      let zendeskUser = await Zendesk.findCustomerByEmail(slackUser.user.profile.email);
+      if (!zendeskUser) { 
+        zendeskUser = await Zendesk.createCustomerByNameEmail(
+          slackUser.user.profile.real_name, 
+          slackUser.user.profile.email
+        );
+      }
+      console.log("Zendesk User Id: " + zendeskUser.id);
+
+      let tickets = Zendesk.getTicketsByExternalId(slackChannel);
+      let hasExistingTicket = tickets.length > 0;
+
+      if (hasExistingTicket) {
+        ticketIdToUpdate = tickets[0].id;
+        try {
+          await Zendesk.addCommentByTicketId(
+            zendeskUser.id,
+            ticketIdToUpdate,
+            slacKMessage
+          );
+          console.log("Posted to Ticket Id: " + ticketIdToUpdate);
+        } catch (e) {
+          // TODO: POST TO SLACK ON FAILURE
+          console.error(JSON.stringify(e));
+        }
+      } else {
+        try {
+          let ticket = await Zendesk.createTicketByCustomerId(
+            zendeskUser.id,
+            `New Slack Message from ${slackUser.user.profile.real_name}`,
+            slacKMessage,
+            slackChannel
+          );
+          console.log("Posted to Ticket Id: " + ticket.id);
+        } catch (e) {
+          // TODO: POST TO SLACK ON FAILURE
+          console.error(JSON.stringify(e));
+        }
+
+        try {
+          await Slack.addBotMessageToChannel(
+            slackChannel, 
+            'Hey there, I got your message sent over to a human. We\'ll send updates here in Slack and over email as we get them.'
+          );
+        } catch (e) {
+          console.error(JSON.stringify(e));
+        }
+      }
+
     } else {
       // It's a message from a bot
     }
