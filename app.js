@@ -97,6 +97,7 @@ app.post('/slack', async (req, res) => {
     let slacKMessage = body.text;
     let slackChannel = body.channel;
     if (body.user) {
+      console.log("We got here...");
       // It's a message from a human
       let slackUserId = body.user;
       const slackUser = await slackClient.users.info({ user: slackUserId });
